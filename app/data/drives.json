@@ -1,0 +1,71 @@
+{
+  "_note": "Fictional mock data for a portfolio project. Not real customer or manufacturer data.",
+  "drives": {
+    "ED-1001": {
+      "model": "ED Enterprise 20TB",
+      "sku": "EDE20-F",
+      "fips_certified": true,
+      "firmware": "3.4",
+      "segment": "enterprise",
+      "refurbished": false,
+      "purchase_date": "2025-03-10",
+      "cert_chain_valid": true,
+      "challenge_response_ok": true
+    },
+    "ED-1002": {
+      "model": "ED Enterprise 16TB",
+      "sku": "EDE16",
+      "fips_certified": false,
+      "firmware": "2.9",
+      "segment": "enterprise",
+      "refurbished": false,
+      "purchase_date": "2021-01-15",
+      "cert_chain_valid": true,
+      "challenge_response_ok": true
+    },
+    "ED-1003": {
+      "model": "ED Enterprise 20TB",
+      "sku": "EDE20-F",
+      "fips_certified": true,
+      "firmware": "3.4",
+      "segment": "enterprise",
+      "refurbished": false,
+      "purchase_date": "2026-02-02",
+      "cert_chain_valid": false,
+      "challenge_response_ok": false
+    },
+    "ED-1004": {
+      "model": "ED Desktop 8TB",
+      "sku": "EDD8",
+      "fips_certified": false,
+      "firmware": "1.7",
+      "segment": "consumer",
+      "refurbished": false,
+      "purchase_date": null,
+      "cert_chain_valid": true,
+      "challenge_response_ok": true
+    },
+    "ED-1005": {
+      "model": "ED Enterprise 12TB",
+      "sku": "EDE12",
+      "fips_certified": false,
+      "firmware": "3.1",
+      "segment": "enterprise",
+      "refurbished": true,
+      "purchase_date": "2026-06-01",
+      "cert_chain_valid": true,
+      "challenge_response_ok": true
+    },
+    "ED-1006": {
+      "model": "ED Enterprise 18TB",
+      "sku": "EDE18",
+      "fips_certified": false,
+      "firmware": "3.3",
+      "segment": "enterprise",
+      "refurbished": false,
+      "purchase_date": "2025-09-20",
+      "cert_chain_valid": true,
+      "challenge_response_ok": true
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "app": "python3 app.py",
+  "context": {
+    "github_repo": "Keerthana-ashok/drive-verification-agent",
+    "@aws-cdk/aws-lambda:recognizeVersionProps": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true
+  }
+}

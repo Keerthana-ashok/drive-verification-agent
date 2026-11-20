@@ -1,0 +1,102 @@
+name: test-and-deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # lets GitHub prove its identity to AWS (OIDC), no stored keys
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip }
+      - run: pip install -r requirements-dev.txt
+      - name: Unit tests
+        run: pytest -q
+      - name: CDK synth (catches infrastructure errors)
+        working-directory: infra
+        env: { CDK_DEFAULT_ACCOUNT: "111111111111" }
+        run: |
+          python ../scripts/build_lambda.py
+          npx --yes aws-cdk@2 synth --quiet
+
+  # The jobs below only run if the repo variable AWS_DEPLOY_ROLE_ARN is set.
+  # New AWS sign-up accounts block the GitHub OIDC connection, so by default
+  # releases run from scripts/release.sh instead (same stages, same gates).
+  deploy-staging:
+    needs: test
+    if: github.event_name != 'pull_request' && vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip }
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: pip install -r requirements-dev.txt
+      - run: python scripts/build_lambda.py
+      - name: Deploy staging
+        working-directory: infra
+        run: npx --yes aws-cdk@2 deploy DriveAgent-Staging --require-approval never
+      - name: Sync policy documents into the knowledge base
+        run: python scripts/ingest.py DriveAgent-Staging
+      - name: Smoke test
+        run: python scripts/smoke_test.py DriveAgent-Staging
+
+  eval-gate:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip }
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: pip install -r app/requirements.txt
+      - name: AI evaluation gate (blocks the release if quality drops)
+        run: python eval/run_eval.py --stack DriveAgent-Staging
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: eval-report, path: eval/report.json }
+
+  deploy-prod:
+    needs: eval-gate
+    runs-on: ubuntu-latest
+    environment: production   # add yourself as a required reviewer = manual approval step
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip }
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: pip install -r requirements-dev.txt
+      - run: python scripts/build_lambda.py
+      - name: Deploy prod (CodeDeploy shifts 10% of traffic for 5 minutes, rolls back on errors)
+        working-directory: infra
+        run: npx --yes aws-cdk@2 deploy DriveAgent-Prod --require-approval never
+      - name: Sync policy documents into the knowledge base
+        run: python scripts/ingest.py DriveAgent-Prod
+      - name: Smoke test
+        run: python scripts/smoke_test.py DriveAgent-Prod
